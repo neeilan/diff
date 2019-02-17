@@ -93,7 +93,6 @@ func (pr *Product) prune() Expression {
 	if pr.f.isZero() || pr.g.isZero() {
 		return newNum(0)
 	}
-
 	if isOne(pr.f) {
 		return pr.g
 	} else if isOne(pr.g) {
@@ -289,7 +288,6 @@ func (pow *ToGenericPower) diff() Expression {
 	// 1. c^f(x)
 	// 2. f(x) ^ c
 	// 3. f(x) ^ g(x) : requires logarithmic differentiation
-	fmt.Println("calling my diff function")
 	if base, baseIsNumber := pow.operand.(*Number); baseIsNumber {
 		//case 1
 		logC := newNum(math.Log(base.value))
@@ -297,7 +295,6 @@ func (pow *ToGenericPower) diff() Expression {
 	} else if exp, expIsNumber := pow.exponent.(*Number); expIsNumber { // case 2
 		return newProduct(pow.exponent, newProduct(toGenericPower(pow.operand, newNum(exp.value - 1)), pow.operand.diff()))
 	} else { // case 3
-		fmt.Println("haha, calling my logarithmic diff function")
 		logDiffSubproblem := newProduct(newLog(pow.operand), pow.exponent).diff()
 		return newProduct(pow, logDiffSubproblem)
 	}
