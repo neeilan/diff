@@ -149,37 +149,54 @@ func (num *Number) String() string {
 }
 
 // Need a more abstract function but here we go
-type Square struct {
-	operand Expression
+type ToNumericPower struct {
+	operand  Expression
+	exponent Expression
 }
 
-func square(expr Expression) *Square {
-	return &Square{operand: expr}
+func toNumericPower(expr Expression, exponent Expression) *ToNumericPower {
+	if _, isNum := exponent.(*Number); !isNum {
+		panic("Can only raise to powers of numbers currently.")
+	}
+	return &ToNumericPower{operand: expr, exponent: exponent}
 }
 
-func (pow *Square) diff() Expression {
-	fPrimeOfG := newProduct(newNum(2), pow.operand)
+func (pow *ToNumericPower) diff() Expression {
+	exponent, _ := pow.exponent.(*Number)
+
+	fPrimeOfG := newProduct(exponent, toNumericPower(pow.operand, newNum(exponent.value-1)))
 	gPrime := pow.operand.diff()
 	return newProduct(fPrimeOfG, gPrime)
 }
 
-func (pow *Square) isZero() bool {
+func (pow *ToNumericPower) isZero() bool {
 	return pow.operand.isZero()
 }
 
-func (pow *Square) prune() Expression {
+func (pow *ToNumericPower) prune() Expression {
+	pow.operand = pow.operand.prune()
+	pow.exponent = pow.exponent.prune()
+
+	if pow.exponent.isZero() {
+		return newNum(1)
+	}
+
 	if pow.isZero() {
 		return newNum(0)
+	} else if isOne(pow.exponent) {
+		return pow.operand
 	}
+
 	return pow
 }
 
-func (pow *Square) String() string {
-	return "(" + pow.operand.String() + "^2)"
+func (pow *ToNumericPower) String() string {
+	exponent, _ := pow.exponent.(*Number)
+	return fmt.Sprintf("("+pow.operand.String()+"^%f)", exponent.value)
 }
 
 func main() {
-	expr := newSum(newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x"))), square(newVar("x")))
+	expr := newSum(newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x"))), toNumericPower(newVar("x"), newNum(3)))
 	fmt.Println("Expression: ", expr)
 
 	derivative := expr.diff()
