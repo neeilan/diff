@@ -110,7 +110,6 @@ func (pr *Product) String() string {
 // Variable
 /*-------------------------------*/
 
-
 type Variable struct {
 	name string
 }
@@ -219,19 +218,44 @@ func (pow *ToNumericPower) String() string {
 // Log
 /*-------------------------------*/
 
-//type Log struct {
-//	operand Expression
-//}
-//
-//func newLog (f Expression) *Log {
-//	return &Log{f}
-//}
-//
-//func (pr *Product) Log (s *Sum) {
-//	f = pr.f
-//	g = pr.g
-//	return newSum(newLog(f), newLog(g))
-//}
+type Log struct {
+	operand Expression
+}
+
+func newLog (f Expression) *Log {
+	return &Log{f}
+}
+
+func (l *Log) isZero() bool {
+	return isOne(l.operand)
+}
+
+func (l *Log) diff() Expression {
+	f := l.operand
+	switch v:= f.(type) {
+		case *ToNumericPower:
+			exp := v.exponent
+			base := v.operand
+			simplified := newProduct(exp, newLog(base))
+			return simplified.diff()
+		case *Product:
+			term1 := newLog(v.f)
+			term2 := newLog(v.g)
+			return newSum(term1, term2).diff()
+	}
+	return newProduct(f.diff(), toNumericPower(f, newNum(-1)))
+}
+
+func (l *Log) prune() Expression {
+	f := l.operand
+	// TODO: expand prune with log properties ?
+	return newLog(f.prune())
+
+}
+
+func (l *Log) String() string {
+	return "log (" + l.operand.String() + ")"
+}
 
 func main() {
 	expr := newSum(newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x"))), toNumericPower(newVar("x"), newNum(3)))
@@ -245,8 +269,15 @@ func main() {
 	fmt.Println("2nd derivative: ", derivative2)
 	fmt.Println("2nd derivative (pruned): ", derivative2.prune())
 
-	recip := toNumericPower(newVar("x"), newNum( -1))
+	recip := toNumericPower(newVar("x"), newNum(-1))
 	derivative_recip := recip.diff()
 	fmt.Println("Derivative of reciprocal:", derivative_recip)
 	fmt.Println("Derivative of reciprocal (pruned):", derivative_recip.prune())
+
+	log_test := newLog(toNumericPower(newVar("x"), newNum(3)))
+	derivative_logcubed := log_test.diff()
+	fmt.Println("Log of cubic:", log_test.prune())
+	fmt.Println("Derivative of log of cubic: ", derivative_logcubed)
+	fmt.Println("Derivative of log of cubic pruned: ", derivative_logcubed.prune())
+
 }
