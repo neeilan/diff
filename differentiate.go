@@ -248,7 +248,14 @@ func (l *Log) diff() Expression {
 
 func (l *Log) prune() Expression {
 	f := l.operand
-	// TODO: expand prune with log properties ?
+	switch v := f.(type) {
+		case *ToNumericPower:
+			exp := v.exponent
+			base := v.operand
+			return newProduct(exp.prune(), newLog(base.prune()))
+		case *Product:
+			return newSum(v.f.prune(), v.g.prune())
+	}
 	return newLog(f.prune())
 
 }
@@ -270,14 +277,16 @@ func main() {
 	fmt.Println("2nd derivative (pruned): ", derivative2.prune())
 
 	recip := toNumericPower(newVar("x"), newNum(-1))
-	derivative_recip := recip.diff()
-	fmt.Println("Derivative of reciprocal:", derivative_recip)
-	fmt.Println("Derivative of reciprocal (pruned):", derivative_recip.prune())
+	derivativeRecip := recip.diff()
+	fmt.Println("Derivative of reciprocal:", derivativeRecip)
+	fmt.Println("Derivative of reciprocal (pruned):", derivativeRecip.prune())
 
-	log_test := newLog(toNumericPower(newVar("x"), newNum(3)))
-	derivative_logcubed := log_test.diff()
-	fmt.Println("Log of cubic:", log_test.prune())
-	fmt.Println("Derivative of log of cubic: ", derivative_logcubed)
-	fmt.Println("Derivative of log of cubic pruned: ", derivative_logcubed.prune())
+	logTest := newLog(toNumericPower(newVar("x"), newNum(3)))
+	derivativeLogCubic := logTest.diff()
+	fmt.Println("Log of cubic:", logTest.prune())
+	fmt.Println("Derivative of log of cubic: ", derivativeLogCubic)
+	fmt.Println("Derivative of log of cubic, pruned: ", derivativeLogCubic.prune())
+	fmt.Println("Derivative of pruned log of cubic: ", logTest.prune().diff())
+	fmt.Println("Derivative of pruned log of cubic, pruned: ", logTest.prune().diff().prune())
 
 }
