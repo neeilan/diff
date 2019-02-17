@@ -1,6 +1,7 @@
 package main
 
 import "fmt"
+import "math"
 
 type Expression interface {
 	diff() Expression
@@ -188,7 +189,6 @@ func (pow *ToNumericPower) diff() Expression {
 }
 
 func (pow *ToNumericPower) isZero() bool {
-	// TODO: should we add an numerical exponent check?
 	return pow.operand.isZero()
 }
 
@@ -264,6 +264,70 @@ func (l *Log) String() string {
 	return "log (" + l.operand.String() + ")"
 }
 
+/*-------------------------------*/
+// ToGeneralPower
+/*-------------------------------*/
+
+// Need a more abstract function but here we go
+type ToGenericPower struct {
+	operand  Expression
+	exponent Expression
+}
+
+func toGenericPower(expr Expression, exponent Expression) *ToGenericPower {
+	//if _, isNum := exponent.(*Number); !isNum {
+	//	panic("Can only raise to powers of numbers currently.")
+	//}
+	return &ToGenericPower{operand: expr, exponent: exponent}
+}
+
+func (pow *ToGenericPower) diff() Expression {
+	pow.operand = pow.operand.prune()
+	pow.exponent = pow.exponent.prune()
+	// functional forms:
+	// If c is a constant, and f(x), g(x) are arbitrary functions, we have
+	// 1. c^f(x)
+	// 2. f(x) ^ c
+	// 3. f(x) ^ g(x) : requires logarithmic differentiation
+	fmt.Println("calling my diff function")
+	if base, baseIsNumber := pow.operand.(*Number); baseIsNumber {
+		//case 1
+		logC := newNum(math.Log(base.value))
+		return newProduct(logC, newProduct(pow, pow.exponent.diff()))
+	} else if exp, expIsNumber := pow.exponent.(*Number); expIsNumber { // case 2
+		return newProduct(pow.exponent, newProduct(toGenericPower(pow.operand, newNum(exp.value - 1)), pow.operand.diff()))
+	} else { // case 3
+		fmt.Println("haha, calling my logarithmic diff function")
+		logDiffSubproblem := newProduct(newLog(pow.operand), pow.exponent).diff()
+		return newProduct(pow, logDiffSubproblem)
+	}
+}
+
+func (pow *ToGenericPower) isZero() bool {
+	return pow.operand.isZero()
+}
+
+func (pow *ToGenericPower) prune() Expression {
+	pow.operand = pow.operand.prune()
+	pow.exponent = pow.exponent.prune()
+
+	if pow.exponent.isZero() && pow.operand.isZero(){
+		panic("0 ^ 0 is not well-defined")
+	} else if pow.exponent.isZero() {
+		return newNum( 1)
+	} else if pow.operand.isZero() {
+		return newNum(0)
+	} else if isOne(pow.exponent) {
+		return pow.operand
+	}
+	return toGenericPower(pow.operand.prune(), pow.exponent.prune())
+}
+
+func (pow *ToGenericPower) String() string {
+	return pow.operand.String() + "^(" + pow.exponent.String() + ")"
+}
+
+
 func main() {
 	expr := newSum(newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x"))), toNumericPower(newVar("x"), newNum(3)))
 	fmt.Println("Expression: ", expr)
@@ -288,5 +352,23 @@ func main() {
 	fmt.Println("Derivative of log of cubic, pruned: ", derivativeLogCubic.prune())
 	fmt.Println("Derivative of pruned log of cubic: ", logTest.prune().diff())
 	fmt.Println("Derivative of pruned log of cubic, pruned: ", logTest.prune().diff().prune())
+
+	genericPowerTest := toGenericPower(newSum(newVar("x"), newLog(newVar("x"))), newNum(2))
+	derivativeGenericPowerTest := genericPowerTest.diff()
+	fmt.Println("Generic Power function: ", genericPowerTest)
+	fmt.Println("Derivative of generic power function: ", derivativeGenericPowerTest)
+	fmt.Println("Derivative of generic power function, pruned: ", derivativeGenericPowerTest.prune())
+
+	genericPowerTest2 := toGenericPower(newNum(4), newVar("x"))
+	derivativeGenericPowerTest2 := genericPowerTest2.diff()
+	fmt.Println("Generic Power function 2: ", genericPowerTest2)
+	fmt.Println("Derivative of generic power function 2: ", derivativeGenericPowerTest2)
+	fmt.Println("Derivative of generic power function 2, pruned: ", derivativeGenericPowerTest2.prune())
+
+	genericPowerTest3 := toGenericPower(newVar("x"), newVar("x"))
+	derivativeGenericPowerTest3 := genericPowerTest3.diff()
+	fmt.Println("Generic Power function 3: ", genericPowerTest3)
+	fmt.Println("Derivative of generic power function 3: ", derivativeGenericPowerTest3)
+	fmt.Println("Derivative of generic power function 3, pruned: ", derivativeGenericPowerTest3.prune())
 
 }
