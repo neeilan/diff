@@ -86,15 +86,17 @@ func (pr *Product) prune() Expression {
 	if pr.f.isZero() || pr.g.isZero() {
 		return newNum(0)
 	}
+
+	if isOne(pr.f) {
+		return pr.g
+	} else if isOne(pr.g) {
+		return pr.f
+	}
+
 	return pr
 }
 
 func (pr *Product) String() string {
-	if isOne(pr.f) {
-		return pr.g.String()
-	} else if isOne(pr.g) {
-		return pr.f.String()
-	}
 	return "(" + pr.f.String() + " * " + pr.g.String() + ")"
 }
 
