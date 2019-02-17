@@ -9,6 +9,14 @@ type Expression interface {
 	String() string
 }
 
+func isOne(expr Expression) bool {
+	num, ok := expr.(*Number)
+	if !ok {
+		return false
+	}
+	return num.value == 1
+}
+
 type Sum struct {
 	// f + g
 	f Expression
@@ -82,6 +90,11 @@ func (pr *Product) prune() Expression {
 }
 
 func (pr *Product) String() string {
+	if isOne(pr.f) {
+		return pr.g.String()
+	} else if isOne(pr.g) {
+		return pr.f.String()
+	}
 	return "(" + pr.f.String() + " * " + pr.g.String() + ")"
 }
 
