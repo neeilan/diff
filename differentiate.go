@@ -16,7 +16,9 @@ func isOne(expr Expression) bool {
 	}
 	return num.value == 1
 }
-
+/*-------------------------------*/
+// Sum
+/*-------------------------------*/
 type Sum struct {
 	// f + g
 	f Expression
@@ -55,6 +57,10 @@ func (s *Sum) prune() Expression {
 func (s *Sum) String() string {
 	return "(" + s.f.String() + " + " + s.g.String() + ")"
 }
+
+/*-------------------------------*/
+// Product
+/*-------------------------------*/
 
 type Product struct {
 	// f * g
@@ -100,6 +106,11 @@ func (pr *Product) String() string {
 	return "(" + pr.f.String() + " * " + pr.g.String() + ")"
 }
 
+/*-------------------------------*/
+// Variable
+/*-------------------------------*/
+
+
 type Variable struct {
 	name string
 }
@@ -123,6 +134,10 @@ func (v *Variable) prune() Expression {
 func (v *Variable) String() string {
 	return v.name
 }
+
+/*-------------------------------*/
+// Number
+/*-------------------------------*/
 
 type Number struct {
 	value float64
@@ -148,6 +163,10 @@ func (num *Number) String() string {
 	return fmt.Sprintf("%f", num.value)
 }
 
+/*-------------------------------*/
+// ToNumericPower
+/*-------------------------------*/
+
 // Need a more abstract function but here we go
 type ToNumericPower struct {
 	operand  Expression
@@ -170,6 +189,7 @@ func (pow *ToNumericPower) diff() Expression {
 }
 
 func (pow *ToNumericPower) isZero() bool {
+	// TODO: should we add an numerical exponent check?
 	return pow.operand.isZero()
 }
 
@@ -195,6 +215,24 @@ func (pow *ToNumericPower) String() string {
 	return fmt.Sprintf("("+pow.operand.String()+"^%f)", exponent.value)
 }
 
+/*-------------------------------*/
+// Log
+/*-------------------------------*/
+
+//type Log struct {
+//	operand Expression
+//}
+//
+//func newLog (f Expression) *Log {
+//	return &Log{f}
+//}
+//
+//func (pr *Product) Log (s *Sum) {
+//	f = pr.f
+//	g = pr.g
+//	return newSum(newLog(f), newLog(g))
+//}
+
 func main() {
 	expr := newSum(newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x"))), toNumericPower(newVar("x"), newNum(3)))
 	fmt.Println("Expression: ", expr)
@@ -207,4 +245,8 @@ func main() {
 	fmt.Println("2nd derivative: ", derivative2)
 	fmt.Println("2nd derivative (pruned): ", derivative2.prune())
 
+	recip := toNumericPower(newVar("x"), newNum( -1))
+	derivative_recip := recip.diff()
+	fmt.Println("Derivative of reciprocal:", derivative_recip)
+	fmt.Println("Derivative of reciprocal (pruned):", derivative_recip.prune())
 }
