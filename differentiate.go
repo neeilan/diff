@@ -133,8 +133,38 @@ func (num *Number) String() string {
 	return fmt.Sprintf("%f", num.value)
 }
 
+// Need a more abstract function but here we go
+type Square struct {
+	operand Expression
+}
+
+func square(expr Expression) *Square {
+	return &Square{operand: expr}
+}
+
+func (pow *Square) diff() Expression {
+	fPrimeOfG := newProduct(newNum(2), pow.operand)
+	gPrime := pow.operand.diff()
+	return newProduct(fPrimeOfG, gPrime)
+}
+
+func (pow *Square) isZero() bool {
+	return pow.operand.isZero()
+}
+
+func (pow *Square) prune() Expression {
+	if pow.isZero() {
+		return newNum(0)
+	}
+	return pow
+}
+
+func (pow *Square) String() string {
+	return "(" + pow.operand.String() + "^2)"
+}
+
 func main() {
-	expr := newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x")))
+	expr := newSum(newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x"))), square(newVar("x")))
 	fmt.Println("Expression: ", expr)
 
 	derivative := expr.diff()
@@ -144,4 +174,5 @@ func main() {
 	derivative2 := derivative.diff()
 	fmt.Println("2nd derivative: ", derivative2)
 	fmt.Println("2nd derivative (pruned): ", derivative2.prune())
+
 }
