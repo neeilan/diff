@@ -98,7 +98,6 @@ func (pr *Product) prune() Expression {
 	} else if isOne(pr.g) {
 		return pr.f
 	}
-
 	return pr
 }
 
@@ -165,7 +164,7 @@ func (num *Number) String() string {
 /*-------------------------------*/
 // ToNumericPower
 /*-------------------------------*/
-
+// TODO: This block of code might be dead, verify against ToGenericPowers
 // Need a more abstract function but here we go
 type ToNumericPower struct {
 	operand  Expression
@@ -324,6 +323,68 @@ func (pow *ToGenericPower) String() string {
 	return pow.operand.String() + "^(" + pow.exponent.String() + ")"
 }
 
+/*-------------------------------*/
+// Sine and Cosine
+/*-------------------------------*/
+
+type Sine struct {
+	operand Expression
+}
+
+type Cosine struct {
+	operand Expression
+}
+
+func newSine (f Expression) *Sine {
+	return &Sine{f}
+}
+
+func newCosine(f Expression) *Cosine {
+	return &Cosine{f}
+}
+
+func (s *Sine) isZero() bool {
+	// currently ignoring the repeated zeros of the sinusoid
+	// TODO: what should we do about the set of zeros?
+	return s.operand.isZero()
+}
+
+func (c *Cosine) isZero() bool {
+	// TODO: what should we do about the zeros of cosine?
+	return newSum(c.operand, newNum(math.Pi/2)).isZero()
+}
+
+func (s *Sine) diff() Expression {
+	f := s.operand
+	return newProduct(newCosine(f), f.diff())
+}
+
+func (c *Cosine) diff() Expression{
+	f := c.operand
+	return newProduct(newProduct(newSine(f), newNum(-1)), f.diff())
+}
+
+func (s *Sine) prune() Expression {
+	f := s.operand
+	f = f.prune()
+	// TODO: add sin(a+b) = sin(a)cos(b) + sin(b)cos(a)
+	return newSine(f)
+}
+
+func (c *Cosine) prune() Expression {
+	f := c.operand
+	f = f.prune()
+	// TODO: add cos(a+b) = cos(a)cos(b) - sin(b)sin(a)
+	return newCosine(f)
+}
+
+func (s *Sine) String() string {
+	return "sin (" + s.operand.String() + ")"
+}
+
+func (c *Cosine) String() string {
+	return "cos (" + c.operand.String() + ")"
+}
 
 func main() {
 	expr := newSum(newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x"))), toNumericPower(newVar("x"), newNum(3)))
@@ -367,5 +428,12 @@ func main() {
 	fmt.Println("Generic Power function 3: ", genericPowerTest3)
 	fmt.Println("Derivative of generic power function 3: ", derivativeGenericPowerTest3)
 	fmt.Println("Derivative of generic power function 3, pruned: ", derivativeGenericPowerTest3.prune())
+
+	sineTest1 := newSum(newSine(toGenericPower(newVar("x"), newNum(5))),
+		newCosine(newProduct(newVar("x"), newLog(newVar("x")))))
+	derivativeSineTest1 := sineTest1.diff()
+	fmt.Println("Sinusoidal function: ", sineTest1)
+	fmt.Println("Sinusoidal derivative: ", derivativeSineTest1)
+	fmt.Println("Sinusoidal derivative, pruned: ", derivativeSineTest1.prune())
 
 }
