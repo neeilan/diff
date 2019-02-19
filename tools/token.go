@@ -11,9 +11,9 @@ const (
 	ILLEGAL = "ILLEGAL"
 	EOF     = "EOF"
 
-	IDENT = "IDENTIFIER" // cos, lod, x, y, ...
+	IDENT = "IDENTIFIER" // cos, log, x, y, ...
 
-	NUM   = "NUMBER"    // 1343456.78
+	NUM = "NUMBER" // 1343456.78
 
 	// Operators
 	ASSIGN   = "="

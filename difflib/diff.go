@@ -1,4 +1,4 @@
-package main
+package difflib
 
 import "fmt"
 import "math"
@@ -429,6 +429,8 @@ func (c *Cosine) String() string {
 }
 
 func main() {
+	// TODO: Stuff here should be moved into tests, and this main() function should be removed.
+
 	expr := newSum(newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x"))), toNumericPower(newVar("x"), newNum(3)))
 	fmt.Println("Expression: ", expr)
 
