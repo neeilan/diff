@@ -5,6 +5,7 @@ import "math"
 
 type Expression interface {
 	diff() Expression
+  eval(map[string]float64) float64
 	isZero() bool
 	prune() Expression
 	String() string
@@ -30,11 +31,15 @@ func newSum(f Expression, g Expression) *Sum {
 	return &Sum{f: f, g: g}
 }
 
-func (pr *Sum) diff() Expression {
-	fprime := pr.f.diff()
-	gprime := pr.g.diff()
+func (s *Sum) diff() Expression {
+	fprime := s.f.diff()
+	gprime := s.g.diff()
 
 	return newSum(fprime, gprime)
+}
+
+func (s *Sum) eval(bindings map[string]float64) float64 {
+  return s.f.eval(bindings) + s.g.eval(bindings)
 }
 
 func (s *Sum) isZero() bool {
@@ -82,6 +87,10 @@ func (pr *Product) diff() Expression {
 	return newSum(newProduct(fPrime, g), newProduct(f, gPrime))
 }
 
+func (pr *Product) eval(bindings map[string]float64) float64 {
+  return pr.f.eval(bindings) * pr.g.eval(bindings)
+}
+
 func (pr *Product) isZero() bool {
 	return pr.f.isZero() && pr.g.isZero()
 }
@@ -113,12 +122,20 @@ type Variable struct {
 	name string
 }
 
+func newVar(name string) *Variable {
+	return &Variable{name: name}
+}
+
 func (*Variable) diff() Expression {
 	return &Number{value: float64(1)}
 }
 
-func newVar(name string) *Variable {
-	return &Variable{name: name}
+func (v *Variable) eval(bindings map[string]float64) float64 {
+  val, ok := bindings[v.name]
+  if !ok {
+    panic(fmt.Sprintf("Attempted to evaluate variable %s, not no binding provided! Available bindings: %v", v.name, bindings))
+  }
+  return val
 }
 
 func (*Variable) isZero() bool {
@@ -147,6 +164,10 @@ func newNum(value float64) *Number {
 
 func (*Number) diff() Expression {
 	return &Number{value: float64(0)}
+}
+
+func (n *Number) eval(bindings map[string]float64) float64 {
+  return n.value
 }
 
 func (n *Number) isZero() bool {
@@ -184,6 +205,10 @@ func (pow *ToNumericPower) diff() Expression {
 	fPrimeOfG := newProduct(exponent, toNumericPower(pow.operand, newNum(exponent.value-1)))
 	gPrime := pow.operand.diff()
 	return newProduct(fPrimeOfG, gPrime)
+}
+
+func (pow *ToNumericPower) eval(bindings map[string]float64) float64 {
+  return math.Pow(pow.operand.eval(bindings), pow.exponent.eval(bindings))
 }
 
 func (pow *ToNumericPower) isZero() bool {
@@ -244,6 +269,10 @@ func (l *Log) diff() Expression {
 	return newProduct(f.diff(), toNumericPower(f, newNum(-1)))
 }
 
+func (l *Log) eval(bindings map[string]float64) float64 {
+  return math.Log(l.operand.eval(bindings))
+}
+
 func (l *Log) prune() Expression {
 	f := l.operand
 	switch v := f.(type) {
@@ -297,6 +326,10 @@ func (pow *ToGenericPower) diff() Expression {
 		logDiffSubproblem := newProduct(newLog(pow.operand), pow.exponent).diff()
 		return newProduct(pow, logDiffSubproblem)
 	}
+}
+
+func (pow *ToGenericPower) eval(bindings map[string]float64) float64 {
+  return math.Pow(pow.operand.eval(bindings), pow.exponent.eval(bindings))
 }
 
 func (pow *ToGenericPower) isZero() bool {
@@ -359,6 +392,14 @@ func (s *Sine) diff() Expression {
 	return newProduct(newCosine(f), f.diff())
 }
 
+func (s *Sine) eval(bindings map[string]float64) float64 {
+  return math.Sin(s.operand.eval(bindings))
+}
+
+func (s *Cosine) eval(bindings map[string]float64) float64 {
+  return math.Cos(s.operand.eval(bindings))
+}
+
 func (c *Cosine) diff() Expression{
 	f := c.operand
 	return newProduct(newProduct(newSine(f), newNum(-1)), f.diff())
@@ -391,49 +432,50 @@ func main() {
 	fmt.Println("Expression: ", expr)
 
 	derivative := expr.diff()
-	fmt.Println("Derivative: ", derivative)
+	// fmt.Println("Derivative: ", derivative)
 	fmt.Println("Derivative (pruned): ", derivative.prune())
+  fmt.Println("Derivative, evaluated at x=3", derivative.eval(map[string]float64{"x" : 3}))
 
 	derivative2 := derivative.diff()
-	fmt.Println("2nd derivative: ", derivative2)
+	// fmt.Println("2nd derivative: ", derivative2)
 	fmt.Println("2nd derivative (pruned): ", derivative2.prune())
 
 	recip := toNumericPower(newVar("x"), newNum(-1))
 	derivativeRecip := recip.diff()
-	fmt.Println("Derivative of reciprocal:", derivativeRecip)
+	// fmt.Println("Derivative of reciprocal:", derivativeRecip)
 	fmt.Println("Derivative of reciprocal (pruned):", derivativeRecip.prune())
 
 	logTest := newLog(toNumericPower(newVar("x"), newNum(3)))
 	derivativeLogCubic := logTest.diff()
 	fmt.Println("Log of cubic:", logTest.prune())
-	fmt.Println("Derivative of log of cubic: ", derivativeLogCubic)
+	// fmt.Println("Derivative of log of cubic: ", derivativeLogCubic)
 	fmt.Println("Derivative of log of cubic, pruned: ", derivativeLogCubic.prune())
-	fmt.Println("Derivative of pruned log of cubic: ", logTest.prune().diff())
+	// fmt.Println("Derivative of pruned log of cubic: ", logTest.prune().diff())
 	fmt.Println("Derivative of pruned log of cubic, pruned: ", logTest.prune().diff().prune())
 
 	genericPowerTest := toGenericPower(newSum(newVar("x"), newLog(newVar("x"))), newNum(2))
 	derivativeGenericPowerTest := genericPowerTest.diff()
 	fmt.Println("Generic Power function: ", genericPowerTest)
-	fmt.Println("Derivative of generic power function: ", derivativeGenericPowerTest)
+	// fmt.Println("Derivative of generic power function: ", derivativeGenericPowerTest)
 	fmt.Println("Derivative of generic power function, pruned: ", derivativeGenericPowerTest.prune())
 
 	genericPowerTest2 := toGenericPower(newNum(4), newVar("x"))
 	derivativeGenericPowerTest2 := genericPowerTest2.diff()
 	fmt.Println("Generic Power function 2: ", genericPowerTest2)
-	fmt.Println("Derivative of generic power function 2: ", derivativeGenericPowerTest2)
+	// fmt.Println("Derivative of generic power function 2: ", derivativeGenericPowerTest2)
 	fmt.Println("Derivative of generic power function 2, pruned: ", derivativeGenericPowerTest2.prune())
 
 	genericPowerTest3 := toGenericPower(newVar("x"), newVar("x"))
 	derivativeGenericPowerTest3 := genericPowerTest3.diff()
 	fmt.Println("Generic Power function 3: ", genericPowerTest3)
-	fmt.Println("Derivative of generic power function 3: ", derivativeGenericPowerTest3)
+	// fmt.Println("Derivative of generic power function 3: ", derivativeGenericPowerTest3)
 	fmt.Println("Derivative of generic power function 3, pruned: ", derivativeGenericPowerTest3.prune())
 
 	sineTest1 := newSum(newSine(toGenericPower(newVar("x"), newNum(5))),
 		newCosine(newProduct(newVar("x"), newLog(newVar("x")))))
 	derivativeSineTest1 := sineTest1.diff()
 	fmt.Println("Sinusoidal function: ", sineTest1)
-	fmt.Println("Sinusoidal derivative: ", derivativeSineTest1)
+	// fmt.Println("Sinusoidal derivative: ", derivativeSineTest1)
 	fmt.Println("Sinusoidal derivative, pruned: ", derivativeSineTest1.prune())
 
 }
