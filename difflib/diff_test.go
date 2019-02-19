@@ -17,7 +17,7 @@ func TestDifffNumber(t *testing.T) {
 }
 
 func TestDiffSumOfProducts(t *testing.T) {
-	// 1.1 * 3.3 + 2.3x
+	// 1.1 * 3.3 - 2x
 	sum := newSum(
 		newProduct(
 			newNum(1.1),
