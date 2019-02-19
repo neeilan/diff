@@ -184,61 +184,6 @@ func (num *Number) String() string {
 }
 
 /*-------------------------------*/
-// ToNumericPower
-/*-------------------------------*/
-// TODO: This block of code might be dead, verify against ToGenericPowers
-// Need a more abstract function but here we go
-type ToNumericPower struct {
-	operand  Expression
-	exponent Expression
-}
-
-func toNumericPower(expr Expression, exponent Expression) *ToNumericPower {
-	if _, isNum := exponent.(*Number); !isNum {
-		panic("Can only raise to powers of numbers currently.")
-	}
-	return &ToNumericPower{operand: expr, exponent: exponent}
-}
-
-func (pow *ToNumericPower) diff() Expression {
-	exponent, _ := pow.exponent.(*Number)
-
-	fPrimeOfG := newProduct(exponent, toNumericPower(pow.operand, newNum(exponent.value-1)))
-	gPrime := pow.operand.diff()
-	return newProduct(fPrimeOfG, gPrime)
-}
-
-func (pow *ToNumericPower) eval(bindings map[string]float64) float64 {
-	return math.Pow(pow.operand.eval(bindings), pow.exponent.eval(bindings))
-}
-
-func (pow *ToNumericPower) isZero() bool {
-	return pow.operand.isZero()
-}
-
-func (pow *ToNumericPower) prune() Expression {
-	pow.operand = pow.operand.prune()
-	pow.exponent = pow.exponent.prune()
-
-	if pow.exponent.isZero() {
-		return newNum(1)
-	}
-
-	if pow.isZero() {
-		return newNum(0)
-	} else if isOne(pow.exponent) {
-		return pow.operand
-	}
-
-	return pow
-}
-
-func (pow *ToNumericPower) String() string {
-	exponent, _ := pow.exponent.(*Number)
-	return fmt.Sprintf("("+pow.operand.String()+"^%f)", exponent.value)
-}
-
-/*-------------------------------*/
 // Log
 /*-------------------------------*/
 
@@ -257,7 +202,7 @@ func (l *Log) isZero() bool {
 func (l *Log) diff() Expression {
 	f := l.operand
 	switch v := f.(type) {
-	case *ToNumericPower:
+	case *ToGenericPower:
 		exp := v.exponent
 		base := v.operand
 		simplified := newProduct(exp, newLog(base))
@@ -267,7 +212,7 @@ func (l *Log) diff() Expression {
 		term2 := newLog(v.g)
 		return newSum(term1, term2).diff()
 	}
-	return newProduct(f.diff(), toNumericPower(f, newNum(-1)))
+	return newProduct(f.diff(), toGenericPower(f, newNum(-1)))
 }
 
 func (l *Log) eval(bindings map[string]float64) float64 {
@@ -277,7 +222,7 @@ func (l *Log) eval(bindings map[string]float64) float64 {
 func (l *Log) prune() Expression {
 	f := l.operand
 	switch v := f.(type) {
-	case *ToNumericPower:
+	case *ToGenericPower:
 		exp := v.exponent
 		base := v.operand
 		return newProduct(exp.prune(), newLog(base.prune()))
@@ -293,7 +238,7 @@ func (l *Log) String() string {
 }
 
 /*-------------------------------*/
-// ToGeneralPower
+// ToGenericPower
 /*-------------------------------*/
 
 // Need a more abstract function but here we go
@@ -431,7 +376,7 @@ func (c *Cosine) String() string {
 func main() {
 	// TODO: Stuff here should be moved into tests, and this main() function should be removed.
 
-	expr := newSum(newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x"))), toNumericPower(newVar("x"), newNum(3)))
+	expr := newSum(newSum(newProduct(newNum(1.1), newNum(3.3)), newProduct(newNum(2.2), newVar("x"))), toGenericPower(newVar("x"), newNum(3)))
 	fmt.Println("Expression: ", expr)
 
 	derivative := expr.diff()
@@ -443,12 +388,12 @@ func main() {
 	// fmt.Println("2nd derivative: ", derivative2)
 	fmt.Println("2nd derivative (pruned): ", derivative2.prune())
 
-	recip := toNumericPower(newVar("x"), newNum(-1))
+	recip := toGenericPower(newVar("x"), newNum(-1))
 	derivativeRecip := recip.diff()
 	// fmt.Println("Derivative of reciprocal:", derivativeRecip)
 	fmt.Println("Derivative of reciprocal (pruned):", derivativeRecip.prune())
 
-	logTest := newLog(toNumericPower(newVar("x"), newNum(3)))
+	logTest := newLog(toGenericPower(newVar("x"), newNum(3)))
 	derivativeLogCubic := logTest.diff()
 	fmt.Println("Log of cubic:", logTest.prune())
 	// fmt.Println("Derivative of log of cubic: ", derivativeLogCubic)
