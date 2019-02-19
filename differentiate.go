@@ -5,7 +5,7 @@ import "math"
 
 type Expression interface {
 	diff() Expression
-  eval(map[string]float64) float64
+	eval(map[string]float64) float64
 	isZero() bool
 	prune() Expression
 	String() string
@@ -18,6 +18,7 @@ func isOne(expr Expression) bool {
 	}
 	return num.value == 1
 }
+
 /*-------------------------------*/
 // Sum
 /*-------------------------------*/
@@ -39,7 +40,7 @@ func (s *Sum) diff() Expression {
 }
 
 func (s *Sum) eval(bindings map[string]float64) float64 {
-  return s.f.eval(bindings) + s.g.eval(bindings)
+	return s.f.eval(bindings) + s.g.eval(bindings)
 }
 
 func (s *Sum) isZero() bool {
@@ -88,7 +89,7 @@ func (pr *Product) diff() Expression {
 }
 
 func (pr *Product) eval(bindings map[string]float64) float64 {
-  return pr.f.eval(bindings) * pr.g.eval(bindings)
+	return pr.f.eval(bindings) * pr.g.eval(bindings)
 }
 
 func (pr *Product) isZero() bool {
@@ -131,11 +132,11 @@ func (*Variable) diff() Expression {
 }
 
 func (v *Variable) eval(bindings map[string]float64) float64 {
-  val, ok := bindings[v.name]
-  if !ok {
-    panic(fmt.Sprintf("Attempted to evaluate variable %s, not no binding provided! Available bindings: %v", v.name, bindings))
-  }
-  return val
+	val, ok := bindings[v.name]
+	if !ok {
+		panic(fmt.Sprintf("Attempted to evaluate variable %s, not no binding provided! Available bindings: %v", v.name, bindings))
+	}
+	return val
 }
 
 func (*Variable) isZero() bool {
@@ -167,7 +168,7 @@ func (*Number) diff() Expression {
 }
 
 func (n *Number) eval(bindings map[string]float64) float64 {
-  return n.value
+	return n.value
 }
 
 func (n *Number) isZero() bool {
@@ -208,7 +209,7 @@ func (pow *ToNumericPower) diff() Expression {
 }
 
 func (pow *ToNumericPower) eval(bindings map[string]float64) float64 {
-  return math.Pow(pow.operand.eval(bindings), pow.exponent.eval(bindings))
+	return math.Pow(pow.operand.eval(bindings), pow.exponent.eval(bindings))
 }
 
 func (pow *ToNumericPower) isZero() bool {
@@ -245,7 +246,7 @@ type Log struct {
 	operand Expression
 }
 
-func newLog (f Expression) *Log {
+func newLog(f Expression) *Log {
 	return &Log{f}
 }
 
@@ -255,33 +256,33 @@ func (l *Log) isZero() bool {
 
 func (l *Log) diff() Expression {
 	f := l.operand
-	switch v:= f.(type) {
-		case *ToNumericPower:
-			exp := v.exponent
-			base := v.operand
-			simplified := newProduct(exp, newLog(base))
-			return simplified.diff()
-		case *Product:
-			term1 := newLog(v.f)
-			term2 := newLog(v.g)
-			return newSum(term1, term2).diff()
+	switch v := f.(type) {
+	case *ToNumericPower:
+		exp := v.exponent
+		base := v.operand
+		simplified := newProduct(exp, newLog(base))
+		return simplified.diff()
+	case *Product:
+		term1 := newLog(v.f)
+		term2 := newLog(v.g)
+		return newSum(term1, term2).diff()
 	}
 	return newProduct(f.diff(), toNumericPower(f, newNum(-1)))
 }
 
 func (l *Log) eval(bindings map[string]float64) float64 {
-  return math.Log(l.operand.eval(bindings))
+	return math.Log(l.operand.eval(bindings))
 }
 
 func (l *Log) prune() Expression {
 	f := l.operand
 	switch v := f.(type) {
-		case *ToNumericPower:
-			exp := v.exponent
-			base := v.operand
-			return newProduct(exp.prune(), newLog(base.prune()))
-		case *Product:
-			return newSum(v.f.prune(), v.g.prune())
+	case *ToNumericPower:
+		exp := v.exponent
+		base := v.operand
+		return newProduct(exp.prune(), newLog(base.prune()))
+	case *Product:
+		return newSum(v.f.prune(), v.g.prune())
 	}
 	return newLog(f.prune())
 
@@ -321,7 +322,7 @@ func (pow *ToGenericPower) diff() Expression {
 		logC := newNum(math.Log(base.value))
 		return newProduct(logC, newProduct(pow, pow.exponent.diff()))
 	} else if exp, expIsNumber := pow.exponent.(*Number); expIsNumber { // case 2
-		return newProduct(pow.exponent, newProduct(toGenericPower(pow.operand, newNum(exp.value - 1)), pow.operand.diff()))
+		return newProduct(pow.exponent, newProduct(toGenericPower(pow.operand, newNum(exp.value-1)), pow.operand.diff()))
 	} else { // case 3
 		logDiffSubproblem := newProduct(newLog(pow.operand), pow.exponent).diff()
 		return newProduct(pow, logDiffSubproblem)
@@ -329,7 +330,7 @@ func (pow *ToGenericPower) diff() Expression {
 }
 
 func (pow *ToGenericPower) eval(bindings map[string]float64) float64 {
-  return math.Pow(pow.operand.eval(bindings), pow.exponent.eval(bindings))
+	return math.Pow(pow.operand.eval(bindings), pow.exponent.eval(bindings))
 }
 
 func (pow *ToGenericPower) isZero() bool {
@@ -340,10 +341,10 @@ func (pow *ToGenericPower) prune() Expression {
 	pow.operand = pow.operand.prune()
 	pow.exponent = pow.exponent.prune()
 
-	if pow.exponent.isZero() && pow.operand.isZero(){
+	if pow.exponent.isZero() && pow.operand.isZero() {
 		panic("0 ^ 0 is not well-defined")
 	} else if pow.exponent.isZero() {
-		return newNum( 1)
+		return newNum(1)
 	} else if pow.operand.isZero() {
 		return newNum(0)
 	} else if isOne(pow.exponent) {
@@ -364,16 +365,8 @@ type Sine struct {
 	operand Expression
 }
 
-type Cosine struct {
-	operand Expression
-}
-
-func newSine (f Expression) *Sine {
+func newSine(f Expression) *Sine {
 	return &Sine{f}
-}
-
-func newCosine(f Expression) *Cosine {
-	return &Cosine{f}
 }
 
 func (s *Sine) isZero() bool {
@@ -382,25 +375,33 @@ func (s *Sine) isZero() bool {
 	return s.operand.isZero()
 }
 
-func (c *Cosine) isZero() bool {
-	// TODO: what should we do about the zeros of cosine?
-	return newSum(c.operand, newNum(math.Pi/2)).isZero()
-}
-
 func (s *Sine) diff() Expression {
 	f := s.operand
 	return newProduct(newCosine(f), f.diff())
 }
 
 func (s *Sine) eval(bindings map[string]float64) float64 {
-  return math.Sin(s.operand.eval(bindings))
+	return math.Sin(s.operand.eval(bindings))
+}
+
+type Cosine struct {
+	operand Expression
+}
+
+func newCosine(f Expression) *Cosine {
+	return &Cosine{f}
+}
+
+func (c *Cosine) isZero() bool {
+	// TODO: what should we do about the zeros of cosine?
+	return newSum(c.operand, newNum(math.Pi/2)).isZero()
 }
 
 func (s *Cosine) eval(bindings map[string]float64) float64 {
-  return math.Cos(s.operand.eval(bindings))
+	return math.Cos(s.operand.eval(bindings))
 }
 
-func (c *Cosine) diff() Expression{
+func (c *Cosine) diff() Expression {
 	f := c.operand
 	return newProduct(newProduct(newSine(f), newNum(-1)), f.diff())
 }
@@ -434,7 +435,7 @@ func main() {
 	derivative := expr.diff()
 	// fmt.Println("Derivative: ", derivative)
 	fmt.Println("Derivative (pruned): ", derivative.prune())
-  fmt.Println("Derivative, evaluated at x=3", derivative.eval(map[string]float64{"x" : 3}))
+	fmt.Println("Derivative, evaluated at x=3", derivative.eval(map[string]float64{"x": 3}))
 
 	derivative2 := derivative.diff()
 	// fmt.Println("2nd derivative: ", derivative2)
@@ -452,6 +453,7 @@ func main() {
 	fmt.Println("Derivative of log of cubic, pruned: ", derivativeLogCubic.prune())
 	// fmt.Println("Derivative of pruned log of cubic: ", logTest.prune().diff())
 	fmt.Println("Derivative of pruned log of cubic, pruned: ", logTest.prune().diff().prune())
+	fmt.Println("Derivative, evaluated at x=2", logTest.diff().prune().eval(map[string]float64{"x": 2}))
 
 	genericPowerTest := toGenericPower(newSum(newVar("x"), newLog(newVar("x"))), newNum(2))
 	derivativeGenericPowerTest := genericPowerTest.diff()
