@@ -58,7 +58,7 @@ func TestDiffLog(t *testing.T) {
 		t.Errorf("Got %f when evaluation [%v].diff() at x=%f. Expected %f. Derivative: [%v]", val, logCubed, x0, 3/x0, logCubedDerivative.prune())
 	}
 }
-// TODO: Write or find a float equality function (ie within tolerance)
+
 func TestDiffGenericPower(t *testing.T) {
 	recip := toGenericPower(newVar("x"), newNum(-1))
 	derivativeRecip := recip.diff()
@@ -78,7 +78,7 @@ func TestDiffGenericPower(t *testing.T) {
 	exponential := toGenericPower(newNum(4), newVar("x"))
 	exponentialDiff := exponential.diff()
 	expectedAnswer := 17213.270665
-	if val := exponentialDiff.eval(bindX(x0)); val != expectedAnswer {
+	if val := exponentialDiff.eval(bindX(x0)); !floatEquals(val, expectedAnswer) {
 		t.Errorf("Got %f when evaluating [%v].diff() at x=%f. Expected %f. Derivative: [%v]", val, exponential, x0,
 			expectedAnswer, exponentialDiff.prune())
 	}
@@ -87,7 +87,7 @@ func TestDiffGenericPower(t *testing.T) {
 	xToTheX := toGenericPower(newVar("x"), newVar("x"))
 	xToTheXDiff := xToTheX.diff()
 	expectedAnswer = 1336550.933484
-	if val := xToTheXDiff.eval(bindX(x0)); val != expectedAnswer {
+	if val := xToTheXDiff.eval(bindX(x0)); !floatEquals(val, expectedAnswer) {
 		t.Errorf("Got %f when evaluating [%v].diff() at x=%f. Expected %f. Derivative: [%v]", val, xToTheX, x0,
 			expectedAnswer, xToTheXDiff.prune())
 	}
@@ -98,19 +98,23 @@ func TestSineCosine(t *testing.T) {
 	derivativeSine := sine.diff()
 
 	x0 := math.Pi/2
-	if val := derivativeSine.eval(bindX(x0)); val != 0.0 {
+	if val := derivativeSine.eval(bindX(x0)); !floatEquals(val, 0) {
 		t.Errorf("Got %f when evaluating [%v].diff() at x=%f. Expected %f. Derivative: [%v]", val, sine, x0,
 			0.0, derivativeSine.prune())
 	}
 
 	cosine := newCosine(newVar("x"))
 	derivativeCosine := cosine.diff()
-	if val := derivativeCosine.eval(bindX(x0)); val != -1 {
+	if val := derivativeCosine.eval(bindX(x0)); !floatEquals(val, -1) {
 		t.Errorf("Got %f when evaluating [%v].diff() at x=%f. Expected %f. Derivative: [%v]", val, cosine, x0,
 			-1.0, derivativeCosine.prune())
 	}
+}
 
+const TOLERANCE = 2e-7
 
+func floatEquals(actual float64, expected float64) bool{
+	return math.Abs(actual - expected) <= TOLERANCE
 }
 
 func bindX(x float64) map[string]float64 {
