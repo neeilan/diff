@@ -1,6 +1,5 @@
-package main
+package lexer
 
-import "fmt"
 import "diff/tools/token"
 
 type Lexer struct {
@@ -9,15 +8,7 @@ type Lexer struct {
 	ch                     byte
 }
 
-func main() {
-	input := "(1+ 3 + 4.5"
-	l := NewLexer(input)
-	for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
-		fmt.Println(tok)
-	}
-}
-
-func NewLexer(input string) *Lexer {
+func New(input string) *Lexer {
 	l := &Lexer{input: input}
 	l.readChar()
 	return l
@@ -48,15 +39,19 @@ func (l *Lexer) NextToken() token.Token {
 		if isLetter(l.ch) {
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.Lookup(tok.Literal)
+			return tok
 		} else if isDigit(l.ch) {
 			tok.Type = token.NUM
 			tok.Literal = l.readNumber()
+			return tok
 		} else {
 			tok = newToken(token.ILLEGAL, l.ch)
 		}
 	}
 
-	l.readChar() // advance
+	// Advance.
+	l.readChar()
+
 	return tok
 }
 
